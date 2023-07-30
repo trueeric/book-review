@@ -29,7 +29,11 @@ class BookController extends Controller
             default => $books->latest()
         };
         // 輸出結果
-        $books = $books->get();
+        // 未使用cache  // $books = $books->get();
+        // 使用cache, 有效期3600秒，原來$book做為callback 放在第3項參數,global 下use Illuminate\Support\Facades\Cache 使用Cache::remember 有風險，例如所有user 在3600秒內都可能拿到不屬於這個user的資料，用cache()也可達到相同的功能，但要設相關更精準的cache的範圍
+        // $books = Cache::remember('books', 3600, fn() => $books->get());
+        $cacheKey = 'books' . $filter . ':' . $title;
+        $books    = cache()->remember($cacheKey, 3600, fn() => $books->get());
 
         return view('books.index', ['books' => $books]);
     }
