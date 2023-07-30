@@ -26,14 +26,17 @@ class BookController extends Controller
             'popular_last_6months' => $books->popularLast6Months(),
             'highest_rated_latest_month' => $books->highestRatedLastMonth(),
             'highest_rated_latest_6months' => $books->highestRatedLast6Months(),
-            default => $books->latest()
+        // default => $books->latest() 原始檔不排，沒cache, reviews和 rating都是0
+            default => $books->latest()->withAvgRating()->withReviewsCount()
         };
         // 輸出結果
         // 未使用cache  // $books = $books->get();
         // 使用cache, 有效期3600秒，原來$book做為callback 放在第3項參數,global 下use Illuminate\Support\Facades\Cache 使用Cache::remember 有風險，例如所有user 在3600秒內都可能拿到不屬於這個user的資料，用cache()也可達到相同的功能，但要設相關更精準的cache的範圍
         // $books = Cache::remember('books', 3600, fn() => $books->get());
         $cacheKey = 'books' . $filter . ':' . $title;
-        $books    = cache()->remember($cacheKey, 3600, fn() => $books->get());
+        // $books    = cache()->remember($cacheKey, 3600, fn() => $books->get());
+        //  30行已經有排了，這裡只要取得 $books內容即可
+        $books = $books->get();
 
         return view('books.index', ['books' => $books]);
     }
@@ -57,14 +60,19 @@ class BookController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Book $book)
+    public function show(int $id)
     {
         // cache
-        $cacheKey = 'book:' . $book->id;
 
-        $book = cache()->remember($cacheKey, 3600, fn() => $book->load([
-            'reviews' => fn($query) => $query->latest(),
-        ]));
+        $cacheKey = 'book:' . $id;
+
+        $book = cache()->remember(
+            $cacheKey,
+            3600,
+            fn() => Book::with([
+                'reviews' => fn($query) => $query->latest(),
+            ])->withAvgRating()->withReviewsCount()->findOrFail($id)
+        );
         return view('books.show', ['book' => $book]);
 
     }

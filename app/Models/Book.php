@@ -16,15 +16,25 @@ class Book extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function scopeWithReviewsCount(Builder $query, $from = null, $to = null): Builder | QueryBuilder
+    {
+        return $query->withCount([
+            'reviews' => fn(Builder $q) => $this->dataRangeFilter($q, $from, $to),
+        ], 'rating');
+    }
+    public function scopeWithAvgRating(Builder $query, $from = null, $to = null): Builder | QueryBuilder
+    {
+        return $query->withAvg([
+            'reviews' => fn(Builder $q) => $this->dataRangeFilter($q, $from, $to),
+        ], 'rating');
+    }
     public function scopeTitle(Builder $query, string $title): Builder | QueryBuilder
     {
         return $query->where('title', 'LIKE', '%' . $title . '%');
     }
     public function scopePopular(Builder $query, $from = null, $to = null): Builder | QueryBuilder
     {
-        return $query->withCount([
-            'reviews' => fn(Builder $q) => $this->dataRangeFilter($q, $from, $to),
-        ])
+        return $query->withReviewsCount()
             ->orderBy('reviews_count', 'desc');
     }
     public function scopePopularOver(Builder $query, int $num): Builder
@@ -35,9 +45,7 @@ class Book extends Model
     }
     public function scopeHighestRated(Builder $query, $from = null, $to = null): Builder
     {
-        return $query->withAvg([
-            'reviews' => fn(Builder $q) => $this->dataRangeFilter($q, $from, $to),
-        ], 'rating')
+        return $query->withAvgRating()
             ->orderBy('reviews_avg_rating', 'desc');
     }
 
@@ -87,5 +95,15 @@ class Book extends Model
             ->highestRated(now()->subMonths(6), now())
             ->popular(now()->subMonths(6), now())
             ->minReviews(5);
+    }
+    protected static function booted()
+    {
+        // 資料表updated及deleted後，清除相關的cache
+        static::updated(
+            fn(Book $book) => cache()->forget('book:' . $book->book_id)
+        );
+        static::deleted(
+            fn(Book $book) => cache()->forget('book:' . $book->book_id)
+        );
     }
 }
