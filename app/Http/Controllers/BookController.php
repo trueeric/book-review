@@ -59,13 +59,13 @@ class BookController extends Controller
      */
     public function show(Book $book)
     {
-        return view('books.show',
-            [
-                // 原始行 'book' => $book 這樣只有取出來，沒有任何排序，下面這樣寫會找出一本又重query,但從上面已找出來的該書資料再重排，loading或許還好。
-                'book' => $book->load([
-                    'reviews' => fn($query) => $query->latest(),
-                ]),
-            ]);
+        // cache
+        $cacheKey = 'book:' . $book->id;
+
+        $book = cache()->remember($cacheKey, 3600, fn() => $book->load([
+            'reviews' => fn($query) => $query->latest(),
+        ]));
+        return view('books.show', ['book' => $book]);
 
     }
 
