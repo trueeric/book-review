@@ -10,6 +10,11 @@ class ReviewController extends Controller
     /**
      * Display a listing of the resource.
      */
+    public function __construct()
+    {
+        //已在app/providers/RouteServiceProvider.php 裡面限制一小時(同一id)最多加review 3次。 只有store時才檢查
+        $this->middleware('throttle:reviews')->only(['store']);
+    }
     public function index()
     {
         //
