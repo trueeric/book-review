@@ -35,8 +35,14 @@ class BookController extends Controller
         // $books = Cache::remember('books', 3600, fn() => $books->get());
         $cacheKey = 'books' . $filter . ':' . $title;
         // $books    = cache()->remember($cacheKey, 3600, fn() => $books->get());
-        //  30行已經有排了，這裡只要取得 $books內容即可
-        $books = $books->get();
+        //  30行已經有排了,會到Book.php裡，update 及 delete清除cache，這裡只要取得 $books內容即可
+        $books =
+        // cache()->remember(
+        //     $cacheKey,
+        //     3600,
+        //     fn()=>
+        $books->get();
+        // );
 
         return view('books.index', ['books' => $books]);
     }
